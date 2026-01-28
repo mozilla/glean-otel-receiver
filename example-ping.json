@@ -1,0 +1,90 @@
+{
+  "client_info": {
+    "client_id": "c641eacf-c30c-4171-b403-f077724e848a",
+    "session_id": "d7e8f9a0-b1c2-3d4e-5f6a-7b8c9d0e1f2a",
+    "session_count": 42,
+    "app_build": "1.2.3",
+    "app_display_version": "1.2.3-beta",
+    "app_channel": "beta",
+    "telemetry_sdk_build": "0.50.0",
+    "architecture": "arm64",
+    "device_manufacturer": "Apple",
+    "device_model": "iPhone 15",
+    "os": "iOS",
+    "os_version": "17.2",
+    "locale": "en-US"
+  },
+  "ping_info": {
+    "seq": 1,
+    "start_time": "2024-01-28T10:00:00Z",
+    "end_time": "2024-01-28T10:01:00Z",
+    "ping_type": "metrics",
+    "reason": "scheduled"
+  },
+  "metrics": {
+    "counter": {
+      "app.opened": 5,
+      "network.requests": 127
+    },
+    "quantity": {
+      "memory.used_mb": 256,
+      "battery.level": 87
+    },
+    "boolean": {
+      "feature.enabled": true
+    },
+    "string": {
+      "ui.theme": "dark"
+    },
+    "string_list": {
+      "active_experiments": ["exp_a", "exp_b", "exp_c"]
+    },
+    "timing_distribution": {
+      "page.load_time": {
+        "sum": 15000,
+        "values": {
+          "1000": 10,
+          "2000": 25,
+          "5000": 40,
+          "10000": 20,
+          "20000": 5
+        }
+      }
+    },
+    "rate": {
+      "network.error_rate": {
+        "numerator": 5,
+        "denominator": 127
+      }
+    }
+  },
+  "events": [
+    {
+      "timestamp": 1000,
+      "category": "ui",
+      "name": "button_clicked",
+      "extra": {
+        "button_id": "submit",
+        "screen": "home"
+      }
+    },
+    {
+      "timestamp": 5000,
+      "category": "navigation",
+      "name": "screen_view",
+      "extra": {
+        "screen_name": "settings",
+        "previous_screen": "home"
+      }
+    },
+    {
+      "timestamp": 8000,
+      "category": "performance",
+      "name": "slow_operation",
+      "extra": {
+        "operation": "database_query",
+        "duration_ms": "1234"
+      }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+receivers:
+  glean:
+    endpoint: localhost:9888
+    path: /submit/telemetry
+    read_header_timeout: 20s
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 100
+
+exporters:
+  debug:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 5
+
+extensions:
+  zpages:
+    endpoint: localhost:55679
+
+service:
+  extensions: [zpages]
+  pipelines:
+    metrics:
+      receivers: [glean]
+      processors: [batch]
+      exporters: [debug]
+    logs:
+      receivers: [glean]
+      processors: [batch]
+      exporters: [debug]
+  telemetry:
+    logs:
+      level: info
