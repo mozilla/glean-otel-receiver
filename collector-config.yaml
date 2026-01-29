@@ -14,6 +14,10 @@ exporters:
     verbosity: detailed
     sampling_initial: 5
     sampling_thereafter: 5
+  prometheus:
+    endpoint: localhost:8888
+    send_timestamps: true
+    enable_open_metrics: true
 
 extensions:
   zpages:
