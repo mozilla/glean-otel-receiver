@@ -2,6 +2,7 @@ package gleanreceiver
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"time"
 
@@ -239,7 +240,7 @@ func addStringListMetric(scopeMetrics pmetric.ScopeMetrics, name string, values 
 }
 
 // addDistributionMetric adds a distribution metric
-func addDistributionMetric(scopeMetrics pmetric.ScopeMetrics, name string, sum interface{}, values interface{}) error {
+func addDistributionMetric(scopeMetrics pmetric.ScopeMetrics, name string, sum any, values any) error {
 	metric := scopeMetrics.Metrics().AppendEmpty()
 	metric.SetName(name)
 	metric.SetUnit("1")
@@ -260,10 +261,43 @@ func addDistributionMetric(scopeMetrics pmetric.ScopeMetrics, name string, sum i
 		return fmt.Errorf("invalid distribution values format")
 	}
 
-	var totalCount uint64
-	for _, count := range valuesMap {
-		totalCount += uint64(toFloat64(count))
+	// Collect bucket/count pairs for sorting
+	type bucketPair struct {
+		boundary float64
+		count    uint64
 	}
+	var pairs []bucketPair
+
+	for b, c := range valuesMap {
+		pairs = append(pairs, bucketPair{
+			boundary: toFloat64(b),
+			count:    uint64(toInt64(c)),
+		})
+	}
+
+	// Sort by boundary to ensure deterministic ordering
+	// Go maps have non-deterministic iteration order
+	slices.SortFunc(pairs, func(a, b bucketPair) int {
+		if a.boundary < b.boundary {
+			return -1
+		} else if a.boundary > b.boundary {
+			return 1
+		}
+		return 0
+	})
+
+	// Extract sorted buckets and counts
+	var totalCount uint64
+	var buckets []float64
+	var counts []uint64
+	for _, p := range pairs {
+		buckets = append(buckets, p.boundary)
+		counts = append(counts, p.count)
+		totalCount += p.count
+	}
+
+	dp.ExplicitBounds().FromRaw(buckets)
+	dp.BucketCounts().FromRaw(counts)
 	dp.SetCount(totalCount)
 
 	return nil
@@ -300,6 +334,24 @@ func boolToFloat(b bool) float64 {
 		return 1.0
 	}
 	return 0.0
+}
+
+func toInt64(val any) int64 {
+	switch v := val.(type) {
+	case float64:
+		return int64(v)
+	case int:
+		return int64(v)
+	case uint:
+		return int64(v)
+	case int64:
+		return v
+	case string:
+		i, _ := strconv.ParseInt(v, 0, 64)
+		return i
+	default:
+		return 0
+	}
 }
 
 func toFloat64(val interface{}) float64 {

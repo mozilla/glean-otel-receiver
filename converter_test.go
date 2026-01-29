@@ -189,8 +189,115 @@ func TestConvertDistributionMetric(t *testing.T) {
 
 	histogram := metric.Histogram()
 	dp := histogram.DataPoints().At(0)
+
+	// Verify sum and count
 	assert.Equal(t, 15000.0, dp.Sum())
 	assert.Equal(t, uint64(100), dp.Count())
+
+	// Verify bucket bounds are sorted in ascending order
+	bounds := dp.ExplicitBounds()
+	assert.Equal(t, 5, bounds.Len())
+	assert.Equal(t, 1000.0, bounds.At(0))
+	assert.Equal(t, 2000.0, bounds.At(1))
+	assert.Equal(t, 5000.0, bounds.At(2))
+	assert.Equal(t, 10000.0, bounds.At(3))
+	assert.Equal(t, 20000.0, bounds.At(4))
+
+	// Verify bucket counts match the sorted order
+	counts := dp.BucketCounts()
+	assert.Equal(t, 5, counts.Len())
+	assert.Equal(t, uint64(10), counts.At(0)) // 1000 bucket
+	assert.Equal(t, uint64(25), counts.At(1)) // 2000 bucket
+	assert.Equal(t, uint64(40), counts.At(2)) // 5000 bucket
+	assert.Equal(t, uint64(20), counts.At(3)) // 10000 bucket
+	assert.Equal(t, uint64(5), counts.At(4))  // 20000 bucket
+}
+
+func TestDistributionMetricEdgeCases(t *testing.T) {
+	t.Run("empty values map", func(t *testing.T) {
+		ping := &GleanPing{
+			ClientInfo: ClientInfo{ClientID: "test"},
+			PingInfo:   PingInfo{Seq: 1, StartTime: time.Now(), EndTime: time.Now(), PingType: "metrics"},
+			Metrics: map[string]interface{}{
+				"timing_distribution": map[string]interface{}{
+					"empty": map[string]interface{}{
+						"sum":    float64(0),
+						"values": map[string]interface{}{},
+					},
+				},
+			},
+		}
+
+		metrics, err := convertToMetrics(ping)
+		require.NoError(t, err)
+
+		scopeMetrics := metrics.ResourceMetrics().At(0).ScopeMetrics().At(0)
+		metric := scopeMetrics.Metrics().At(0)
+		dp := metric.Histogram().DataPoints().At(0)
+
+		assert.Equal(t, 0.0, dp.Sum())
+		assert.Equal(t, uint64(0), dp.Count())
+		assert.Equal(t, 0, dp.ExplicitBounds().Len())
+		assert.Equal(t, 0, dp.BucketCounts().Len())
+	})
+
+	t.Run("single bucket", func(t *testing.T) {
+		ping := &GleanPing{
+			ClientInfo: ClientInfo{ClientID: "test"},
+			PingInfo:   PingInfo{Seq: 1, StartTime: time.Now(), EndTime: time.Now(), PingType: "metrics"},
+			Metrics: map[string]interface{}{
+				"timing_distribution": map[string]interface{}{
+					"single": map[string]interface{}{
+						"sum": float64(100),
+						"values": map[string]interface{}{
+							"50": float64(2),
+						},
+					},
+				},
+			},
+		}
+
+		metrics, err := convertToMetrics(ping)
+		require.NoError(t, err)
+
+		scopeMetrics := metrics.ResourceMetrics().At(0).ScopeMetrics().At(0)
+		metric := scopeMetrics.Metrics().At(0)
+		dp := metric.Histogram().DataPoints().At(0)
+
+		assert.Equal(t, 100.0, dp.Sum())
+		assert.Equal(t, uint64(2), dp.Count())
+		assert.Equal(t, 1, dp.ExplicitBounds().Len())
+		assert.Equal(t, 50.0, dp.ExplicitBounds().At(0))
+		assert.Equal(t, uint64(2), dp.BucketCounts().At(0))
+	})
+
+	t.Run("different numeric types", func(t *testing.T) {
+		ping := &GleanPing{
+			ClientInfo: ClientInfo{ClientID: "test"},
+			PingInfo:   PingInfo{Seq: 1, StartTime: time.Now(), EndTime: time.Now(), PingType: "metrics"},
+			Metrics: map[string]interface{}{
+				"timing_distribution": map[string]interface{}{
+					"mixed": map[string]interface{}{
+						"sum": 500, // int instead of float64
+						"values": map[string]interface{}{
+							"100": 5,          // int count
+							"200": float64(10), // float64 count
+						},
+					},
+				},
+			},
+		}
+
+		metrics, err := convertToMetrics(ping)
+		require.NoError(t, err)
+
+		scopeMetrics := metrics.ResourceMetrics().At(0).ScopeMetrics().At(0)
+		metric := scopeMetrics.Metrics().At(0)
+		dp := metric.Histogram().DataPoints().At(0)
+
+		assert.Equal(t, 500.0, dp.Sum())
+		assert.Equal(t, uint64(15), dp.Count())
+	})
 }
 
 func TestConvertRateMetric(t *testing.T) {
@@ -262,6 +369,30 @@ func TestToFloat64(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := toFloat64(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestToInt64(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected int64
+	}{
+		{"int", 42, 42},
+		{"int64", int64(100), 100},
+		{"uint", uint(50), 50},
+		{"float64", float64(3.14), 3},
+		{"string decimal", "42", 42},
+		{"string hex", "0x2A", 42},
+		{"invalid string", "abc", 0},
+		{"nil", nil, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := toInt64(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
