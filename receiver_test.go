@@ -67,7 +67,8 @@ func TestReceiverHandleInvalidMethod(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Try GET instead of POST
-	resp, err := http.Get("http://localhost:19889/test")
+	// Path will be /test/{namespace}/{document_type}/{document_version}/{document_id} due to GetPath()
+	resp, err := http.Get("http://localhost:19889/test/test-ns/test-type/1/test-doc-123")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -100,8 +101,9 @@ func TestReceiverHandleInvalidJSON(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Send invalid JSON
+	// Path will be /test/{namespace}/{document_type}/{document_version}/{document_id} due to GetPath()
 	resp, err := http.Post(
-		"http://localhost:19890/test",
+		"http://localhost:19890/test/test-ns/test-type/1/test-doc-123",
 		"application/json",
 		bytes.NewBufferString("{invalid json}"),
 	)
@@ -170,8 +172,9 @@ func TestReceiverHandleValidPing(t *testing.T) {
 	body, err := json.Marshal(ping)
 	require.NoError(t, err)
 
+	// Path will be /test/{namespace}/{document_type}/{document_version}/{document_id} due to GetPath()
 	resp, err := http.Post(
-		"http://localhost:19891/test",
+		"http://localhost:19891/test/test-ns/test-type/1/test-doc-123",
 		"application/json",
 		bytes.NewBuffer(body),
 	)

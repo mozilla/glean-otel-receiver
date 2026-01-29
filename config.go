@@ -19,10 +19,32 @@ type Config struct {
 }
 
 func (cfg *Config) GetPath() string {
-	if strings.HasSuffix(cfg.Path, "{document_id}") {
+	// Required path parameters in order
+	requiredParams := []string{"{namespace}", "{document_type}", "{document_version}", "{document_id}"}
+
+	// Check if all required parameters are already present
+	hasAllParams := true
+	for _, param := range requiredParams {
+		if !strings.Contains(cfg.Path, param) {
+			hasAllParams = false
+			break
+		}
+	}
+
+	// If all parameters are present, return as-is
+	if hasAllParams {
 		return cfg.Path
 	}
-	return path.Join(cfg.Path, "{document_id}")
+
+	// Otherwise, append missing parameters
+	result := cfg.Path
+	for _, param := range requiredParams {
+		if !strings.Contains(result, param) {
+			result = path.Join(result, param)
+		}
+	}
+
+	return result
 }
 
 // Validate checks if the receiver configuration is valid

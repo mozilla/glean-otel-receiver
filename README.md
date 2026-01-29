@@ -123,7 +123,7 @@ func components() (otelcol.Factories, error) {
 Send Glean pings to the receiver via HTTP POST:
 
 ```bash
-curl -X POST http://localhost:8888/submit/telemetry \
+curl -X POST http://localhost:8888/submit/example/metrics/1/1235123 \
   -H "Content-Type: application/json" \
   -d @glean_ping.json
 ```

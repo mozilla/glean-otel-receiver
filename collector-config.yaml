@@ -1,7 +1,8 @@
 receivers:
   glean:
     endpoint: localhost:9888
-    path: /submit/telemetry
+    # Default: "/submit/{namespace}/{document_type}/{document_version}/{document_id}"
+    # path: ""
     read_header_timeout: 20s
 
 processors:

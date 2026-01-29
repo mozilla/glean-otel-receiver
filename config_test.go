@@ -56,6 +56,53 @@ func TestCreateDefaultConfig(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 
 	assert.Equal(t, "localhost:9888", cfg.ServerConfig.NetAddr.Endpoint)
-	assert.Equal(t, "/submit/telemetry", cfg.Path)
+	assert.Equal(t, "/submit/{namespace}/{document_type}/{document_version}/{document_id}", cfg.Path)
 	assert.Equal(t, 20*time.Second, cfg.ServerConfig.ReadHeaderTimeout)
+}
+
+func TestGetPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected string
+	}{
+		{
+			name:     "full path with all parameters",
+			path:     "/submit/{namespace}/{document_type}/{document_version}/{document_id}",
+			expected: "/submit/{namespace}/{document_type}/{document_version}/{document_id}",
+		},
+		{
+			name:     "path without parameters",
+			path:     "/submit",
+			expected: "/submit/{namespace}/{document_type}/{document_version}/{document_id}",
+		},
+		{
+			name:     "path with only namespace",
+			path:     "/submit/{namespace}",
+			expected: "/submit/{namespace}/{document_type}/{document_version}/{document_id}",
+		},
+		{
+			name:     "path with namespace and document_type",
+			path:     "/submit/{namespace}/{document_type}",
+			expected: "/submit/{namespace}/{document_type}/{document_version}/{document_id}",
+		},
+		{
+			name:     "path with trailing slash",
+			path:     "/submit/",
+			expected: "/submit/{namespace}/{document_type}/{document_version}/{document_id}",
+		},
+		{
+			name:     "simple path",
+			path:     "/test",
+			expected: "/test/{namespace}/{document_type}/{document_version}/{document_id}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Path: tt.path}
+			result := cfg.GetPath()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }

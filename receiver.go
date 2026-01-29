@@ -109,8 +109,11 @@ func (r *gleanReceiver) handleGleanPing(w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	// set the pings document_id
-	ping.DocumentId = req.PathValue("document_id")
+	// set the pings path parameters
+	ping.Namespace = req.PathValue("namespace")
+	ping.DocumentType = req.PathValue("document_type")
+	ping.DocumentVersion = req.PathValue("document_version")
+	ping.DocumentID = req.PathValue("document_id")
 
 	// Convert to metrics if metrics consumer is available
 	if r.metricsConsumer != nil && ping.Metrics != nil {

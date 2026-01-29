@@ -39,7 +39,7 @@ func createDefaultConfig() component.Config {
 
 	return &Config{
 		ServerConfig: serverConfig,
-		Path:         "/submit/telemetry",
+		Path:         "/submit/{namespace}/{document_type}/{document_version}/{document_id}",
 	}
 }
 

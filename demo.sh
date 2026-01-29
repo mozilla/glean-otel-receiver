@@ -36,7 +36,7 @@ sleep 3
 
 # Send test ping
 echo "📤 Sending test Glean ping..."
-RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://localhost:9888/submit/telemetry/test-document-123 \
+RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://localhost:9888/submit/glean/metrics/1/test-document-123 \
   -H "Content-Type: application/json" \
   -d @example-ping.json)
 

@@ -47,23 +47,26 @@ func TestConvertToMetrics(t *testing.T) {
 
 	// Verify resource attributes
 	rm := metrics.ResourceMetrics().At(0)
-	attrs := rm.Resource().Attributes()
+	resAttrs := rm.Resource().Attributes()
 
-	clientID, exists := attrs.Get("client.id")
+	clientID, exists := resAttrs.Get("client.id")
 	assert.True(t, exists)
 	assert.Equal(t, "test-client-id", clientID.Str())
 
-	osType, exists := attrs.Get("os.type")
+	osType, exists := resAttrs.Get("os.type")
 	assert.True(t, exists)
 	assert.Equal(t, "iOS", osType.Str())
 
-	pingSeq, exists := attrs.Get("ping.seq")
+	// Verify scope attributes (ping info is now on scope, not resource)
+	scopeMetrics := rm.ScopeMetrics().At(0)
+	assert.Equal(t, "glean", scopeMetrics.Scope().Name())
+
+	scopeAttrs := scopeMetrics.Scope().Attributes()
+	pingSeq, exists := scopeAttrs.Get("ping.seq")
 	assert.True(t, exists)
 	assert.Equal(t, int64(1), pingSeq.Int())
 
 	// Verify metrics
-	scopeMetrics := rm.ScopeMetrics().At(0)
-	assert.Equal(t, "glean", scopeMetrics.Scope().Name())
 	assert.Equal(t, 4, scopeMetrics.Metrics().Len())
 
 	// Check counter metric
