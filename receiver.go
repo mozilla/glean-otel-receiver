@@ -53,7 +53,7 @@ func (r *gleanReceiver) Start(ctx context.Context, host component.Host) error {
 		r.host = host
 
 		mux := http.NewServeMux()
-		mux.HandleFunc(r.cfg.Path, r.handleGleanPing)
+		mux.HandleFunc(r.cfg.GetPath(), r.handleGleanPing)
 
 		r.server = &http.Server{
 			Addr:              r.cfg.ServerConfig.NetAddr.Endpoint,
@@ -63,7 +63,7 @@ func (r *gleanReceiver) Start(ctx context.Context, host component.Host) error {
 
 		r.logger.Info("Starting Glean receiver",
 			zap.String("endpoint", r.cfg.ServerConfig.NetAddr.Endpoint),
-			zap.String("path", r.cfg.Path))
+			zap.String("path", r.cfg.GetPath()))
 
 		go func() {
 			if err := r.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -108,6 +108,9 @@ func (r *gleanReceiver) handleGleanPing(w http.ResponseWriter, req *http.Request
 		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
+
+	// set the pings document_id
+	ping.DocumentId = req.PathValue("document_id")
 
 	// Convert to metrics if metrics consumer is available
 	if r.metricsConsumer != nil && ping.Metrics != nil {

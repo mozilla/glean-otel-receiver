@@ -15,7 +15,7 @@ exporters:
     sampling_initial: 5
     sampling_thereafter: 5
   prometheus:
-    endpoint: localhost:8888
+    endpoint: localhost:8889  # Changed from 8888 to avoid conflicts
     send_timestamps: true
     enable_open_metrics: true
 
@@ -29,7 +29,7 @@ service:
     metrics:
       receivers: [glean]
       processors: [batch]
-      exporters: [debug]
+      exporters: [debug, prometheus]
     logs:
       receivers: [glean]
       processors: [batch]

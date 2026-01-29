@@ -2,6 +2,8 @@ package gleanreceiver
 
 import (
 	"errors"
+	"path"
+	"strings"
 
 	"go.opentelemetry.io/collector/config/confighttp"
 )
@@ -14,6 +16,13 @@ type Config struct {
 	// Path is the HTTP path where Glean pings are received
 	// Default: /submit/telemetry
 	Path string `mapstructure:"path"`
+}
+
+func (cfg *Config) GetPath() string {
+	if strings.HasSuffix(cfg.Path, "{document_id}") {
+		return cfg.Path
+	}
+	return path.Join(cfg.Path, "{document_id}")
 }
 
 // Validate checks if the receiver configuration is valid

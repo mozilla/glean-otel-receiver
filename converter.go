@@ -19,11 +19,11 @@ func convertToMetrics(ping *GleanPing) (pmetric.Metrics, error) {
 	// Add resource attributes from client_info
 	addClientInfoAttributes(rm.Resource().Attributes(), &ping.ClientInfo)
 
-	// Add ping_info attributes
-	addPingInfoAttributes(rm.Resource().Attributes(), &ping.PingInfo)
-
 	scopeMetrics := rm.ScopeMetrics().AppendEmpty()
-	scopeMetrics.Scope().SetName("glean")
+	scope := scopeMetrics.Scope()
+	scope.SetName("glean")
+	// Add ping_info attributes to scope
+	addPingInfoAttributes(scope.Attributes(), &ping.PingInfo)
 
 	// Process all metric categories
 	if ping.Metrics != nil {
