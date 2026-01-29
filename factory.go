@@ -33,12 +33,13 @@ func NewFactory() receiver.Factory {
 
 // createDefaultConfig creates the default configuration for Glean receiver
 func createDefaultConfig() component.Config {
+	serverConfig := confighttp.NewDefaultServerConfig()
+	serverConfig.NetAddr.Endpoint = "localhost:9888"
+	serverConfig.ReadHeaderTimeout = 20 * time.Second
+
 	return &Config{
-		ServerConfig: confighttp.ServerConfig{
-			Endpoint:          "localhost:9888",
-			ReadHeaderTimeout: 20 * time.Second,
-		},
-		Path: "/submit/telemetry",
+		ServerConfig: serverConfig,
+		Path:         "/submit/telemetry",
 	}
 }
 

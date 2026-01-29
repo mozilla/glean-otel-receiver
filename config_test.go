@@ -16,22 +16,26 @@ func TestConfigValidate(t *testing.T) {
 	}{
 		{
 			name: "valid config",
-			config: &Config{
-				ServerConfig: confighttp.ServerConfig{
-					Endpoint: "localhost:9888",
-				},
-				Path: "/submit/telemetry",
-			},
+			config: func() *Config {
+				cfg := confighttp.NewDefaultServerConfig()
+				cfg.NetAddr.Endpoint = "localhost:9888"
+				return &Config{
+					ServerConfig: cfg,
+					Path:         "/submit/telemetry",
+				}
+			}(),
 			wantErr: false,
 		},
 		{
 			name: "empty path",
-			config: &Config{
-				ServerConfig: confighttp.ServerConfig{
-					Endpoint: "localhost:9888",
-				},
-				Path: "",
-			},
+			config: func() *Config {
+				cfg := confighttp.NewDefaultServerConfig()
+				cfg.NetAddr.Endpoint = "localhost:9888"
+				return &Config{
+					ServerConfig: cfg,
+					Path:         "",
+				}
+			}(),
 			wantErr: true,
 		},
 	}
@@ -51,7 +55,7 @@ func TestConfigValidate(t *testing.T) {
 func TestCreateDefaultConfig(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
 
-	assert.Equal(t, "localhost:9888", cfg.ServerConfig.Endpoint)
+	assert.Equal(t, "localhost:9888", cfg.ServerConfig.NetAddr.Endpoint)
 	assert.Equal(t, "/submit/telemetry", cfg.Path)
 	assert.Equal(t, 20*time.Second, cfg.ServerConfig.ReadHeaderTimeout)
 }

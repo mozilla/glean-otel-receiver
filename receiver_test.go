@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/receiver/receivertest"
@@ -19,11 +20,11 @@ func TestReceiverStartStop(t *testing.T) {
 	cfg := &Config{
 		Path: "/test",
 	}
-	cfg.ServerConfig.Endpoint = "localhost:19888"
+	cfg.ServerConfig.NetAddr.Endpoint = "localhost:19888"
 
 	receiver, err := newGleanReceiver(
 		cfg,
-		receivertest.NewNopSettings(),
+		receivertest.NewNopSettings(component.MustNewType("glean")),
 		consumertest.NewNop(),
 		consumertest.NewNop(),
 	)
@@ -44,14 +45,14 @@ func TestReceiverHandleInvalidMethod(t *testing.T) {
 	cfg := &Config{
 		Path: "/test",
 	}
-	cfg.ServerConfig.Endpoint = "localhost:19889"
+	cfg.ServerConfig.NetAddr.Endpoint = "localhost:19889"
 
 	metricsSink := new(consumertest.MetricsSink)
 	logsSink := new(consumertest.LogsSink)
 
 	receiver, err := newGleanReceiver(
 		cfg,
-		receivertest.NewNopSettings(),
+		receivertest.NewNopSettings(component.MustNewType("glean")),
 		metricsSink,
 		logsSink,
 	)
@@ -77,14 +78,14 @@ func TestReceiverHandleInvalidJSON(t *testing.T) {
 	cfg := &Config{
 		Path: "/test",
 	}
-	cfg.ServerConfig.Endpoint = "localhost:19890"
+	cfg.ServerConfig.NetAddr.Endpoint = "localhost:19890"
 
 	metricsSink := new(consumertest.MetricsSink)
 	logsSink := new(consumertest.LogsSink)
 
 	receiver, err := newGleanReceiver(
 		cfg,
-		receivertest.NewNopSettings(),
+		receivertest.NewNopSettings(component.MustNewType("glean")),
 		metricsSink,
 		logsSink,
 	)
@@ -114,14 +115,14 @@ func TestReceiverHandleValidPing(t *testing.T) {
 	cfg := &Config{
 		Path: "/test",
 	}
-	cfg.ServerConfig.Endpoint = "localhost:19891"
+	cfg.ServerConfig.NetAddr.Endpoint = "localhost:19891"
 
 	metricsSink := new(consumertest.MetricsSink)
 	logsSink := new(consumertest.LogsSink)
 
 	receiver, err := newGleanReceiver(
 		cfg,
-		receivertest.NewNopSettings(),
+		receivertest.NewNopSettings(component.MustNewType("glean")),
 		metricsSink,
 		logsSink,
 	)
@@ -197,11 +198,11 @@ func TestReceiverMultipleStarts(t *testing.T) {
 	cfg := &Config{
 		Path: "/test",
 	}
-	cfg.ServerConfig.Endpoint = "localhost:19892"
+	cfg.ServerConfig.NetAddr.Endpoint = "localhost:19892"
 
 	receiver, err := newGleanReceiver(
 		cfg,
-		receivertest.NewNopSettings(),
+		receivertest.NewNopSettings(component.MustNewType("glean")),
 		consumertest.NewNop(),
 		consumertest.NewNop(),
 	)

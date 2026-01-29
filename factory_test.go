@@ -24,7 +24,7 @@ func TestCreateMetricsReceiver(t *testing.T) {
 
 	receiver, err := factory.CreateMetrics(
 		context.Background(),
-		receivertest.NewNopSettings(),
+		receivertest.NewNopSettings(component.MustNewType("glean")),
 		cfg,
 		consumertest.NewNop(),
 	)
@@ -39,7 +39,7 @@ func TestCreateLogsReceiver(t *testing.T) {
 
 	receiver, err := factory.CreateLogs(
 		context.Background(),
-		receivertest.NewNopSettings(),
+		receivertest.NewNopSettings(component.MustNewType("glean")),
 		cfg,
 		consumertest.NewNop(),
 	)
@@ -57,7 +57,7 @@ func TestCreateReceiverWithInvalidConfig(t *testing.T) {
 	// Should still create receiver (validation happens separately)
 	receiver, err := factory.CreateMetrics(
 		context.Background(),
-		receivertest.NewNopSettings(),
+		receivertest.NewNopSettings(component.MustNewType("glean")),
 		cfg,
 		consumertest.NewNop(),
 	)
@@ -69,7 +69,7 @@ func TestCreateReceiverWithInvalidConfig(t *testing.T) {
 func TestSharedReceiverInstance(t *testing.T) {
 	factory := NewFactory()
 	cfg := factory.CreateDefaultConfig()
-	settings := receivertest.NewNopSettings()
+	settings := receivertest.NewNopSettings(component.MustNewType("glean"))
 
 	// Create metrics receiver
 	metricsReceiver, err := factory.CreateMetrics(

@@ -56,13 +56,13 @@ func (r *gleanReceiver) Start(ctx context.Context, host component.Host) error {
 		mux.HandleFunc(r.cfg.Path, r.handleGleanPing)
 
 		r.server = &http.Server{
-			Addr:              r.cfg.ServerConfig.Endpoint,
+			Addr:              r.cfg.ServerConfig.NetAddr.Endpoint,
 			Handler:           mux,
 			ReadHeaderTimeout: r.cfg.ServerConfig.ReadHeaderTimeout,
 		}
 
 		r.logger.Info("Starting Glean receiver",
-			zap.String("endpoint", r.cfg.ServerConfig.Endpoint),
+			zap.String("endpoint", r.cfg.ServerConfig.NetAddr.Endpoint),
 			zap.String("path", r.cfg.Path))
 
 		go func() {
