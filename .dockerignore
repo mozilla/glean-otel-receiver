@@ -1,0 +1,28 @@
+# Build artifacts
+dist/
+*.log
+collector.log
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test files
+*_test.go
+
+# Examples (optional - remove this line if you want examples in the image)
+example-*.json
+
+# Temporary files
+*.tmp
+.DS_Store
