@@ -25,17 +25,17 @@ func TestConvertToMetrics(t *testing.T) {
 			PingType:  "metrics",
 			Reason:    "scheduled",
 		},
-		Metrics: map[string]interface{}{
-			"counter": map[string]interface{}{
+		Metrics: map[string]any{
+			"counter": map[string]any{
 				"test_counter": float64(5),
 			},
-			"boolean": map[string]interface{}{
+			"boolean": map[string]any{
 				"test_bool": true,
 			},
-			"string": map[string]interface{}{
+			"string": map[string]any{
 				"test_string": "value",
 			},
-			"quantity": map[string]interface{}{
+			"quantity": map[string]any{
 				"test_quantity": float64(100),
 			},
 		},
@@ -165,11 +165,11 @@ func TestConvertDistributionMetric(t *testing.T) {
 			EndTime:   time.Now().Add(time.Minute),
 			PingType:  "metrics",
 		},
-		Metrics: map[string]interface{}{
-			"timing_distribution": map[string]interface{}{
-				"page_load": map[string]interface{}{
+		Metrics: map[string]any{
+			"timing_distribution": map[string]any{
+				"page_load": map[string]any{
 					"sum": float64(15000),
-					"values": map[string]interface{}{
+					"values": map[string]any{
 						"1000":  float64(10),
 						"2000":  float64(25),
 						"5000":  float64(40),
@@ -221,11 +221,11 @@ func TestDistributionMetricEdgeCases(t *testing.T) {
 		ping := &GleanPing{
 			ClientInfo: ClientInfo{ClientID: "test"},
 			PingInfo:   PingInfo{Seq: 1, StartTime: time.Now(), EndTime: time.Now(), PingType: "metrics"},
-			Metrics: map[string]interface{}{
-				"timing_distribution": map[string]interface{}{
-					"empty": map[string]interface{}{
+			Metrics: map[string]any{
+				"timing_distribution": map[string]any{
+					"empty": map[string]any{
 						"sum":    float64(0),
-						"values": map[string]interface{}{},
+						"values": map[string]any{},
 					},
 				},
 			},
@@ -248,11 +248,11 @@ func TestDistributionMetricEdgeCases(t *testing.T) {
 		ping := &GleanPing{
 			ClientInfo: ClientInfo{ClientID: "test"},
 			PingInfo:   PingInfo{Seq: 1, StartTime: time.Now(), EndTime: time.Now(), PingType: "metrics"},
-			Metrics: map[string]interface{}{
-				"timing_distribution": map[string]interface{}{
-					"single": map[string]interface{}{
+			Metrics: map[string]any{
+				"timing_distribution": map[string]any{
+					"single": map[string]any{
 						"sum": float64(100),
-						"values": map[string]interface{}{
+						"values": map[string]any{
 							"50": float64(2),
 						},
 					},
@@ -278,12 +278,12 @@ func TestDistributionMetricEdgeCases(t *testing.T) {
 		ping := &GleanPing{
 			ClientInfo: ClientInfo{ClientID: "test"},
 			PingInfo:   PingInfo{Seq: 1, StartTime: time.Now(), EndTime: time.Now(), PingType: "metrics"},
-			Metrics: map[string]interface{}{
-				"timing_distribution": map[string]interface{}{
-					"mixed": map[string]interface{}{
+			Metrics: map[string]any{
+				"timing_distribution": map[string]any{
+					"mixed": map[string]any{
 						"sum": 500, // int instead of float64
-						"values": map[string]interface{}{
-							"100": 5,          // int count
+						"values": map[string]any{
+							"100": 5,           // int count
 							"200": float64(10), // float64 count
 						},
 					},
@@ -314,9 +314,9 @@ func TestConvertRateMetric(t *testing.T) {
 			EndTime:   time.Now().Add(time.Minute),
 			PingType:  "metrics",
 		},
-		Metrics: map[string]interface{}{
-			"rate": map[string]interface{}{
-				"error_rate": map[string]interface{}{
+		Metrics: map[string]any{
+			"rate": map[string]any{
+				"error_rate": map[string]any{
 					"numerator":   float64(5),
 					"denominator": float64(127),
 				},
@@ -358,7 +358,7 @@ func TestBoolToFloat(t *testing.T) {
 func TestToFloat64(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected float64
 	}{
 		{"float64", float64(3.14), 3.14},
@@ -380,7 +380,7 @@ func TestToFloat64(t *testing.T) {
 func TestToInt64(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected int64
 	}{
 		{"int", 42, 42},

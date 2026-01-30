@@ -126,9 +126,9 @@ func addPingInfoAttributes(attrs pcommon.Map, pingInfo *PingInfo) {
 }
 
 // processMetrics processes all metric categories and types
-func processMetrics(scopeMetrics pmetric.ScopeMetrics, metricsMap map[string]interface{}) error {
+func processMetrics(scopeMetrics pmetric.ScopeMetrics, metricsMap map[string]any) error {
 	for category, categoryData := range metricsMap {
-		categoryMap, ok := categoryData.(map[string]interface{})
+		categoryMap, ok := categoryData.(map[string]any)
 		if !ok {
 			continue
 		}
@@ -145,12 +145,12 @@ func processMetrics(scopeMetrics pmetric.ScopeMetrics, metricsMap map[string]int
 				addCounterMetric(scopeMetrics, fullName, v)
 			case string:
 				addStringMetric(scopeMetrics, fullName, v)
-			case map[string]interface{}:
+			case map[string]any:
 				// Handle complex metric types (distributions, rates, etc.)
 				if err := processComplexMetric(scopeMetrics, fullName, v); err != nil {
 					return err
 				}
-			case []interface{}:
+			case []any:
 				// Handle string lists
 				addStringListMetric(scopeMetrics, fullName, v)
 			}
@@ -161,7 +161,7 @@ func processMetrics(scopeMetrics pmetric.ScopeMetrics, metricsMap map[string]int
 }
 
 // processComplexMetric handles complex metric types like distributions and rates
-func processComplexMetric(scopeMetrics pmetric.ScopeMetrics, name string, data map[string]interface{}) error {
+func processComplexMetric(scopeMetrics pmetric.ScopeMetrics, name string, data map[string]any) error {
 	// Check if it's a distribution (has "sum" and "values")
 	if sum, hasSum := data["sum"]; hasSum {
 		if values, hasValues := data["values"]; hasValues {
@@ -221,7 +221,7 @@ func addStringMetric(scopeMetrics pmetric.ScopeMetrics, name string, value strin
 }
 
 // addStringListMetric adds a string list as multiple data points
-func addStringListMetric(scopeMetrics pmetric.ScopeMetrics, name string, values []interface{}) {
+func addStringListMetric(scopeMetrics pmetric.ScopeMetrics, name string, values []any) {
 	metric := scopeMetrics.Metrics().AppendEmpty()
 	metric.SetName(name)
 	metric.SetUnit("1")
@@ -256,7 +256,7 @@ func addDistributionMetric(scopeMetrics pmetric.ScopeMetrics, name string, sum a
 	dp.SetSum(sumValue)
 
 	// Process bucket values
-	valuesMap, ok := values.(map[string]interface{})
+	valuesMap, ok := values.(map[string]any)
 	if !ok {
 		return fmt.Errorf("invalid distribution values format")
 	}
@@ -304,7 +304,7 @@ func addDistributionMetric(scopeMetrics pmetric.ScopeMetrics, name string, sum a
 }
 
 // addRateMetric adds a rate metric as a gauge showing the ratio
-func addRateMetric(scopeMetrics pmetric.ScopeMetrics, name string, numerator interface{}, denominator interface{}) error {
+func addRateMetric(scopeMetrics pmetric.ScopeMetrics, name string, numerator any, denominator any) error {
 	num := toFloat64(numerator)
 	denom := toFloat64(denominator)
 
@@ -354,7 +354,7 @@ func toInt64(val any) int64 {
 	}
 }
 
-func toFloat64(val interface{}) float64 {
+func toFloat64(val any) float64 {
 	switch v := val.(type) {
 	case float64:
 		return v

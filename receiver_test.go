@@ -141,10 +141,10 @@ func TestReceiverHandleValidPing(t *testing.T) {
 	// Create a valid Glean ping
 	ping := GleanPing{
 		ClientInfo: ClientInfo{
-			ClientID:   "test-client",
-			AppBuild:   "1.0.0",
-			OS:         "iOS",
-			OSVersion:  "17.0",
+			ClientID:  "test-client",
+			AppBuild:  "1.0.0",
+			OS:        "iOS",
+			OSVersion: "17.0",
 		},
 		PingInfo: PingInfo{
 			Seq:       1,
@@ -152,8 +152,8 @@ func TestReceiverHandleValidPing(t *testing.T) {
 			EndTime:   time.Now().Add(time.Minute),
 			PingType:  "metrics",
 		},
-		Metrics: map[string]interface{}{
-			"counter": map[string]interface{}{
+		Metrics: map[string]any{
+			"counter": map[string]any{
 				"test_counter": float64(5),
 			},
 		},
