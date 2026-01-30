@@ -1,9 +1,9 @@
-# Glean OpenTelemetry Receiver
+# [Experimental] Glean OpenTelemetry Receiver
 
 [![Tests](https://github.com/mozilla/glean-otel-receiver/actions/workflows/test.yml/badge.svg)](https://github.com/mozilla/glean-otel-receiver/actions/workflows/test.yml)
 [![Build](https://github.com/mozilla/glean-otel-receiver/actions/workflows/build.yml/badge.svg)](https://github.com/mozilla/glean-otel-receiver/actions/workflows/build.yml)
 
-A custom OpenTelemetry Collector receiver for Mozilla Glean telemetry pings.
+A custom & experimental OpenTelemetry Collector receiver for Mozilla Glean telemetry pings.
 
 ## Overview
 
