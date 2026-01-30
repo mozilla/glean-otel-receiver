@@ -25,7 +25,7 @@ jobs:
       run: go build -v ./...
 
     - name: Install OpenTelemetry Collector Builder
-      run: go install go.opentelemetry.io/collector/cmd/builder@v0.113.0
+      run: go install go.opentelemetry.io/collector/cmd/builder@v0.144.0
 
     - name: Build custom collector
       run: ~/go/bin/builder --config=builder-config.yaml
