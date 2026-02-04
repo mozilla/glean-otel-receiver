@@ -1,0 +1,16 @@
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    secrets: inherit
+    permissions:
+      contents: read
+      id-token: write
+    uses: mozilla-it/deploy-actions/.github/workflows/build-and-push.yml@main
+    with:
+      image_name: glean-otel-col
+      gar_name: fx-enterprise-private
+      project_id: moz-fx-fx-enterprise-prod
