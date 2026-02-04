@@ -48,6 +48,12 @@ receivers:
     # Optional: Configure read timeout
     read_header_timeout: 20s
 
+    # Optional: Forward raw Glean pings to downstream HTTP endpoint
+    # forward_url: "https://downstream.example.com/ingest"
+    # forward_timeout: 30s
+    # forward_headers:
+    #   Authorization: "Bearer ${env:API_KEY}"
+
 exporters:
   debug:
     verbosity: detailed
@@ -63,6 +69,39 @@ service:
       receivers: [glean]
       exporters: [debug]
 ```
+
+## Raw Ping Forwarding
+
+The Glean receiver can forward raw Glean ping JSON to a downstream HTTP endpoint while still converting to OpenTelemetry format for observability.
+
+### Configuration
+
+```yaml
+receivers:
+  glean:
+    endpoint: localhost:9888
+
+    # Forward raw Glean pings to downstream pipeline
+    forward_url: "https://downstream.example.com/ingest"
+    forward_timeout: 30s
+    forward_headers:
+      X-Source: "glean-otel-collector"
+```
+
+
+### Behavior
+
+1. Receiver reads raw HTTP request body once
+2. Forwards exact JSON payload to `forward_url` via POST
+3. Continues with OpenTelemetry conversion (if configured)
+4. If forwarding fails, logs error but continues processing
+5. Client receives 200 OK if either forward OR OTel conversion succeeds
+
+### Configuration Options
+
+- **forward_url**: Downstream HTTP endpoint (required to enable forwarding)
+- **forward_timeout**: HTTP client timeout (default: 30s)
+- **forward_headers**: Custom headers for authentication or metadata
 
 ### Path Parameters
 

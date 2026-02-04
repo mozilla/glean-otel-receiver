@@ -4,6 +4,7 @@ import (
 	"errors"
 	"path"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/collector/config/confighttp"
 )
@@ -16,6 +17,17 @@ type Config struct {
 	// Path is the HTTP path where Glean pings are received
 	// Default: /submit/telemetry
 	Path string `mapstructure:"path"`
+
+	// ForwardURL is the downstream HTTP endpoint to forward raw Glean ping JSON
+	// If empty, forwarding is disabled
+	ForwardURL string `mapstructure:"forward_url"`
+
+	// ForwardHeaders contains custom HTTP headers to send with forwarded requests
+	ForwardHeaders map[string]string `mapstructure:"forward_headers"`
+
+	// ForwardTimeout is the HTTP client timeout for forwarding requests
+	// Default: 30s
+	ForwardTimeout time.Duration `mapstructure:"forward_timeout"`
 }
 
 func (cfg *Config) GetPath() string {
@@ -52,5 +64,13 @@ func (cfg *Config) Validate() error {
 	if cfg.Path == "" {
 		return errors.New("path cannot be empty")
 	}
+
+	// Validate forward URL if provided
+	if cfg.ForwardURL != "" {
+		if !strings.HasPrefix(cfg.ForwardURL, "http://") && !strings.HasPrefix(cfg.ForwardURL, "https://") {
+			return errors.New("forward_url must start with http:// or https://")
+		}
+	}
+
 	return nil
 }

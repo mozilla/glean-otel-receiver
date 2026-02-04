@@ -38,6 +38,49 @@ func TestConfigValidate(t *testing.T) {
 			}(),
 			wantErr: true,
 		},
+		{
+			name: "valid config with forwarding",
+			config: func() *Config {
+				cfg := confighttp.NewDefaultServerConfig()
+				cfg.NetAddr.Endpoint = "localhost:9888"
+				return &Config{
+					ServerConfig:   cfg,
+					Path:           "/submit/telemetry",
+					ForwardURL:     "https://downstream.example.com/ingest",
+					ForwardTimeout: 30 * time.Second,
+					ForwardHeaders: map[string]string{
+						"Authorization": "Bearer token",
+					},
+				}
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "invalid forward URL - no protocol",
+			config: func() *Config {
+				cfg := confighttp.NewDefaultServerConfig()
+				cfg.NetAddr.Endpoint = "localhost:9888"
+				return &Config{
+					ServerConfig: cfg,
+					Path:         "/submit/telemetry",
+					ForwardURL:   "downstream.example.com/ingest",
+				}
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "invalid forward URL - invalid protocol",
+			config: func() *Config {
+				cfg := confighttp.NewDefaultServerConfig()
+				cfg.NetAddr.Endpoint = "localhost:9888"
+				return &Config{
+					ServerConfig: cfg,
+					Path:         "/submit/telemetry",
+					ForwardURL:   "ftp://downstream.example.com/ingest",
+				}
+			}(),
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

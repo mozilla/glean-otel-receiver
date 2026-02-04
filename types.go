@@ -1,17 +1,26 @@
 package gleanreceiver
 
-import "time"
+import (
+	"net/http"
+	"time"
+)
+
+// GleanPingRequest contains contexutal data about the ping request
+type GleanPingRequest struct {
+	Namespace       string      `json:"-"`
+	DocumentType    string      `json:"-"`
+	DocumentVersion string      `json:"-"`
+	DocumentID      string      `json:"-"`
+	Headers         http.Header `json:"-"`
+}
 
 // GleanPing represents the top-level structure of a Glean telemetry ping
 type GleanPing struct {
-	Namespace       string         `json:"-"`
-	DocumentType    string         `json:"-"`
-	DocumentVersion string         `json:"-"`
-	DocumentID      string         `json:"-"`
-	ClientInfo      ClientInfo     `json:"client_info"`
-	PingInfo        PingInfo       `json:"ping_info"`
-	Metrics         map[string]any `json:"metrics,omitempty"`
-	Events          []Event        `json:"events,omitempty"`
+	Request    GleanPingRequest `json:"-"`
+	ClientInfo ClientInfo       `json:"client_info"`
+	PingInfo   PingInfo         `json:"ping_info"`
+	Metrics    map[string]any   `json:"metrics,omitempty"`
+	Events     []Event          `json:"events,omitempty"`
 }
 
 // ClientInfo contains information about the client device and application

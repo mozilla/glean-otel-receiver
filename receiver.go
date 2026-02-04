@@ -25,6 +25,7 @@ type gleanReceiver struct {
 	host            component.Host
 	startOnce       sync.Once
 	shutdownOnce    sync.Once
+	forwarder       *gleanPingForwarder
 }
 
 // newGleanReceiver creates a new instance of gleanReceiver
@@ -37,12 +38,20 @@ func newGleanReceiver(
 	if metricsConsumer == nil && logsConsumer == nil {
 		return nil, errors.New("at least one consumer (metrics or logs) must be provided")
 	}
-
+	var forwarder *gleanPingForwarder
+	var err error
+	if cfg.ForwardURL != "" {
+		forwarder, err = newGleanPingForwarder(cfg, set)
+		if err != nil {
+			set.Logger.Error("Error creating ping forwarder: %s", zap.Error(err))
+		}
+	}
 	return &gleanReceiver{
 		cfg:             cfg,
 		logger:          set.Logger,
 		metricsConsumer: metricsConsumer,
 		logsConsumer:    logsConsumer,
+		forwarder:       forwarder,
 	}, nil
 }
 
@@ -56,13 +65,13 @@ func (r *gleanReceiver) Start(ctx context.Context, host component.Host) error {
 		mux.HandleFunc(r.cfg.GetPath(), r.handleGleanPing)
 
 		r.server = &http.Server{
-			Addr:              r.cfg.ServerConfig.NetAddr.Endpoint,
+			Addr:              r.cfg.NetAddr.Endpoint,
 			Handler:           mux,
-			ReadHeaderTimeout: r.cfg.ServerConfig.ReadHeaderTimeout,
+			ReadHeaderTimeout: r.cfg.ReadHeaderTimeout,
 		}
 
 		r.logger.Info("Starting Glean receiver",
-			zap.String("endpoint", r.cfg.ServerConfig.NetAddr.Endpoint),
+			zap.String("endpoint", r.cfg.NetAddr.Endpoint),
 			zap.String("path", r.cfg.GetPath()))
 
 		go func() {
@@ -94,6 +103,14 @@ func (r *gleanReceiver) handleGleanPing(w http.ResponseWriter, req *http.Request
 		return
 	}
 
+	gleanRequest := GleanPingRequest{
+		Namespace:       req.PathValue("namespace"),
+		DocumentType:    req.PathValue("document_type"),
+		DocumentVersion: req.PathValue("document_version"),
+		DocumentID:      req.PathValue("document_id"),
+		Headers:         req.Header.Clone(),
+	}
+
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		r.logger.Error("Failed to read request body", zap.Error(err))
@@ -102,18 +119,27 @@ func (r *gleanReceiver) handleGleanPing(w http.ResponseWriter, req *http.Request
 	}
 	defer req.Body.Close()
 
+	// Forward raw body to downstream if configured
+	if r.forwarder != nil {
+		r.logger.Info("Forwarding glean ping")
+		if err := r.forwarder.forwardRawPing(context.Background(), gleanRequest, body); err != nil {
+			r.logger.Error("Failed to forward ping to downstream",
+				zap.Error(err),
+				zap.String("downstream_url", r.cfg.ForwardURL))
+			// Continue processing even if forward fails
+		}
+	}
+
 	var ping GleanPing
+
 	if err := json.Unmarshal(body, &ping); err != nil {
 		r.logger.Error("Failed to parse Glean ping", zap.Error(err))
 		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
 
-	// set the pings path parameters
-	ping.Namespace = req.PathValue("namespace")
-	ping.DocumentType = req.PathValue("document_type")
-	ping.DocumentVersion = req.PathValue("document_version")
-	ping.DocumentID = req.PathValue("document_id")
+	// set the pings request parameters
+	ping.Request = gleanRequest
 
 	// Convert to metrics if metrics consumer is available
 	if r.metricsConsumer != nil && ping.Metrics != nil {

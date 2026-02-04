@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -226,4 +228,251 @@ func TestReceiverMultipleStarts(t *testing.T) {
 	// Multiple shutdowns should be safe
 	err = receiver.Shutdown(ctx)
 	require.NoError(t, err)
+}
+
+// TestForwardRawPing tests successful forwarding to downstream
+func TestForwardRawPing(t *testing.T) {
+	var receivedBody []byte
+	var receivedHeaders http.Header
+	received := make(chan bool, 1)
+
+	// Create mock downstream server
+	downstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Logf("Downstream received request: method=%s, url=%s", r.Method, r.URL.Path)
+
+		// Verify request method
+		assert.Equal(t, "POST", r.Method)
+
+		// Capture headers
+		receivedHeaders = r.Header.Clone()
+
+		// Read and store body
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		receivedBody = body
+
+		t.Logf("Downstream received body: %s", string(body))
+
+		w.WriteHeader(http.StatusOK)
+		received <- true
+	}))
+	defer downstream.Close()
+
+	t.Logf("Downstream server URL: %s", downstream.URL)
+
+	// Create receiver with forward URL
+	cfg := &Config{
+		Path:       "/test",
+		ForwardURL: downstream.URL,
+		ForwardHeaders: map[string]string{
+			"X-Test-Header": "test-value",
+			"Authorization": "Bearer test-token",
+		},
+	}
+	cfg.ServerConfig.NetAddr.Endpoint = "localhost:19893"
+
+	receiver, err := newGleanReceiver(
+		cfg,
+		receivertest.NewNopSettings(component.MustNewType("glean")),
+		consumertest.NewNop(),
+		consumertest.NewNop(),
+	)
+	require.NoError(t, err)
+	require.NotNil(t, receiver.forwarder, "Forwarder should be created when ForwardURL is set")
+
+	ctx := context.Background()
+	err = receiver.Start(ctx, componenttest.NewNopHost())
+	require.NoError(t, err)
+	defer receiver.Shutdown(ctx)
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Send test ping
+	ping := GleanPing{
+		ClientInfo: ClientInfo{ClientID: "test"},
+		PingInfo:   PingInfo{Seq: 1, StartTime: time.Now(), EndTime: time.Now(), PingType: "metrics"},
+	}
+	body, err := json.Marshal(ping)
+	require.NoError(t, err)
+
+	resp, err := http.Post(
+		"http://localhost:19893/test/glean/metrics/1/test-doc-123",
+		"application/json",
+		bytes.NewBuffer(body),
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	t.Log("Request recieved successfully")
+
+	// Wait for async forwarding to complete BEFORE closing response
+	// Note: Forwarding happens asynchronously in a goroutine that uses req.Context()
+	// The context is tied to the HTTP request lifecycle, so we need to wait before closing
+	select {
+	case <-received:
+		// Forwarding completed successfully
+		t.Log("Forwarding completed successfully")
+	case <-time.After(5 * time.Second):
+		t.Fatal("Timeout waiting for downstream to receive ping")
+	}
+
+	resp.Body.Close()
+
+	// Verify downstream received the raw ping
+	assert.NotEmpty(t, receivedBody)
+
+	var receivedPing GleanPing
+	err = json.Unmarshal(receivedBody, &receivedPing)
+	require.NoError(t, err)
+	assert.Equal(t, "test", receivedPing.ClientInfo.ClientID)
+
+	// Verify custom headers were sent
+	assert.Equal(t, "test-value", receivedHeaders.Get("X-Test-Header"))
+	assert.Equal(t, "Bearer test-token", receivedHeaders.Get("Authorization"))
+	// Verify original Content-Type header was forwarded
+	assert.Equal(t, "application/json", receivedHeaders.Get("Content-Type"))
+}
+
+// TestForwardRawPingNoConfig tests that forwarding is skipped when not configured
+func TestForwardRawPingNoConfig(t *testing.T) {
+	cfg := &Config{
+		Path: "/test",
+		// ForwardURL not set - forwarding should be skipped
+	}
+	cfg.ServerConfig.NetAddr.Endpoint = "localhost:19894"
+
+	receiver, err := newGleanReceiver(
+		cfg,
+		receivertest.NewNopSettings(component.MustNewType("glean")),
+		consumertest.NewNop(),
+		consumertest.NewNop(),
+	)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	err = receiver.Start(ctx, componenttest.NewNopHost())
+	require.NoError(t, err)
+	defer receiver.Shutdown(ctx)
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Send test ping
+	ping := GleanPing{
+		ClientInfo: ClientInfo{ClientID: "test"},
+		PingInfo:   PingInfo{Seq: 1, StartTime: time.Now(), EndTime: time.Now(), PingType: "metrics"},
+	}
+	body, err := json.Marshal(ping)
+	require.NoError(t, err)
+
+	resp, err := http.Post(
+		"http://localhost:19894/test/glean/metrics/1/test-doc-123",
+		"application/json",
+		bytes.NewBuffer(body),
+	)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	// Should still succeed even without forwarding
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+// TestForwardRawPingFailure tests error handling when downstream fails
+func TestForwardRawPingFailure(t *testing.T) {
+	// Create mock downstream server that returns error
+	downstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("downstream error"))
+	}))
+	defer downstream.Close()
+
+	cfg := &Config{
+		Path:       "/test",
+		ForwardURL: downstream.URL,
+	}
+	cfg.ServerConfig.NetAddr.Endpoint = "localhost:19895"
+
+	receiver, err := newGleanReceiver(
+		cfg,
+		receivertest.NewNopSettings(component.MustNewType("glean")),
+		consumertest.NewNop(),
+		consumertest.NewNop(),
+	)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	err = receiver.Start(ctx, componenttest.NewNopHost())
+	require.NoError(t, err)
+	defer receiver.Shutdown(ctx)
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Send test ping
+	ping := GleanPing{
+		ClientInfo: ClientInfo{ClientID: "test"},
+		PingInfo:   PingInfo{Seq: 1, StartTime: time.Now(), EndTime: time.Now(), PingType: "metrics"},
+	}
+	body, err := json.Marshal(ping)
+	require.NoError(t, err)
+
+	resp, err := http.Post(
+		"http://localhost:19895/test/glean/metrics/1/test-doc-123",
+		"application/json",
+		bytes.NewBuffer(body),
+	)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	// Should still succeed (log and continue strategy)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+// TestForwardRawPingTimeout tests timeout behavior
+func TestForwardRawPingTimeout(t *testing.T) {
+	// Create mock downstream server that delays response
+	downstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(2 * time.Second) // Longer than timeout
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer downstream.Close()
+
+	cfg := &Config{
+		Path:           "/test",
+		ForwardURL:     downstream.URL,
+		ForwardTimeout: 100 * time.Millisecond, // Short timeout
+	}
+	cfg.ServerConfig.NetAddr.Endpoint = "localhost:19896"
+
+	receiver, err := newGleanReceiver(
+		cfg,
+		receivertest.NewNopSettings(component.MustNewType("glean")),
+		consumertest.NewNop(),
+		consumertest.NewNop(),
+	)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	err = receiver.Start(ctx, componenttest.NewNopHost())
+	require.NoError(t, err)
+	defer receiver.Shutdown(ctx)
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Send test ping
+	ping := GleanPing{
+		ClientInfo: ClientInfo{ClientID: "test"},
+		PingInfo:   PingInfo{Seq: 1, StartTime: time.Now(), EndTime: time.Now(), PingType: "metrics"},
+	}
+	body, err := json.Marshal(ping)
+	require.NoError(t, err)
+
+	resp, err := http.Post(
+		"http://localhost:19896/test/glean/metrics/1/test-doc-123",
+		"application/json",
+		bytes.NewBuffer(body),
+	)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	// Should still succeed despite timeout (log and continue strategy)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
